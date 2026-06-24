@@ -18,6 +18,10 @@ interface AppState {
   mcpActivity: McpActivityEntry[]
   loading: boolean
   error: string | null
+  formModal: { open: boolean; editing: ConnectionConfig | null }
+  onAddConnection: () => void
+  onEditConnection: (conn: ConnectionConfig) => void
+  closeFormModal: () => void
 
   loadConnections: () => Promise<void>
   saveConnection: (conn: ConnectionConfig) => Promise<void>
@@ -42,6 +46,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   mcpActivity: [],
   loading: false,
   error: null,
+  formModal: { open: false, editing: null },
+  onAddConnection: () => set({ formModal: { open: true, editing: null } }),
+  onEditConnection: (conn) => set({ formModal: { open: true, editing: conn } }),
+  closeFormModal: () => set({ formModal: { open: false, editing: null } }),
 
   loadConnections: async () => {
     set({ loading: true, error: null })

@@ -19,3 +19,11 @@ html, body, #root {
   background: #45475a;
   border-radius: 4px;
 }
+
+@layer components {
+  .input {
+    @apply w-full px-3 py-2 bg-agent-darker border border-agent-border rounded
+           text-sm text-gray-200 placeholder-gray-600
+           focus:outline-none focus:border-agent-primary transition-colors;
+  }
+}
