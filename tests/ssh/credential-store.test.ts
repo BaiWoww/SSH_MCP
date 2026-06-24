@@ -6,8 +6,6 @@ vi.mock('keytar', () => ({
     getPassword: vi.fn().mockResolvedValue(null),
     setPassword: vi.fn().mockResolvedValue(undefined),
     deletePassword: vi.fn().mockResolvedValue(undefined),
-    getPasswordSync: vi.fn().mockReturnValue(null),
-    setPasswordSync: vi.fn(),
   },
 }))
 

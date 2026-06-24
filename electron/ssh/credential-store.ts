@@ -25,13 +25,13 @@ interface StoredConnectionMetadata {
   authTag: string
 }
 
-function getOrCreateMasterKey(): Buffer {
-  const existing = keytar.getPasswordSync(SERVICE_NAME, KEYCHAIN_KEY)
+async function getOrCreateMasterKey(): Promise<Buffer> {
+  const existing = await keytar.getPassword(SERVICE_NAME, KEYCHAIN_KEY)
   if (existing) {
     return Buffer.from(existing, 'base64')
   }
   const newKey = crypto.randomBytes(KEY_LENGTH)
-  keytar.setPasswordSync(SERVICE_NAME, KEYCHAIN_KEY, newKey.toString('base64'))
+  await keytar.setPassword(SERVICE_NAME, KEYCHAIN_KEY, newKey.toString('base64'))
   return newKey
 }
 
@@ -59,7 +59,7 @@ function decrypt(ciphertext: string, iv: string, authTag: string, key: Buffer): 
 
 export class CredentialStore {
   private store: Store<{ connections: Record<string, StoredConnectionMetadata> }>
-  private masterKey: Buffer
+  private masterKey: Buffer | null = null
 
   constructor() {
     const userDataPath = app?.getPath('userData') ?? path.join(process.cwd(), '.agentssh-data')
@@ -68,14 +68,21 @@ export class CredentialStore {
       cwd: userDataPath,
       defaults: { connections: {} },
     })
-    this.masterKey = getOrCreateMasterKey()
+  }
+
+  private async ensureKey(): Promise<Buffer> {
+    if (!this.masterKey) {
+      this.masterKey = await getOrCreateMasterKey()
+    }
+    return this.masterKey
   }
 
   async saveConnection(conn: ConnectionConfig): Promise<void> {
+    const key = await this.ensureKey()
     const secret = conn.authMethod === 'password'
       ? (conn.password ?? '')
       : (conn.privateKey ?? '')
-    const { ciphertext, iv, authTag } = encrypt(secret, this.masterKey)
+    const { ciphertext, iv, authTag } = encrypt(secret, key)
     const metadata: StoredConnectionMetadata = {
       id: conn.id,
       name: conn.name,
@@ -95,10 +102,11 @@ export class CredentialStore {
   }
 
   async getConnection(id: string): Promise<ConnectionConfig | undefined> {
+    const key = await this.ensureKey()
     const connections = this.store.get('connections', {})
     const meta = connections[id]
     if (!meta) return undefined
-    const secret = decrypt(meta.encryptedSecret, meta.iv, meta.authTag, this.masterKey)
+    const secret = decrypt(meta.encryptedSecret, meta.iv, meta.authTag, key)
     const conn: ConnectionConfig = {
       id: meta.id,
       name: meta.name,

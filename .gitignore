@@ -3,6 +3,7 @@ dist/
 dist-electron/
 release/
 release2/
+release3/
 .electron-cache/
 .electron-builder-cache/
 .node-gyp/
