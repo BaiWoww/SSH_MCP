@@ -1,0 +1,68 @@
+{
+  "name": "agent-ssh",
+  "version": "0.1.0",
+  "description": "AI智能体特化的SSH客户端 - 安全连接 + MCP文件操作",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.node.json && cross-env NODE_ENV=development electron .",
+    "build": "tsc -p tsconfig.node.json && vite build",
+    "build:electron": "npm run build && electron-builder",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ssh2": "^1.15.0",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "electron-store": "^8.2.0",
+    "keytar": "^7.9.0",
+    "zustand": "^4.5.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@monaco-editor/react": "^4.6.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.0",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "@types/node": "^20.12.0",
+    "@types/ssh2": "^1.15.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.2.0",
+    "vite-plugin-electron": "^0.28.0",
+    "typescript": "^5.4.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0",
+    "cross-env": "^7.0.3",
+    "vitest": "^1.6.0",
+    "@playwright/test": "^1.44.0"
+  },
+  "build": {
+    "appId": "com.agentssh.app",
+    "productName": "AgentSSH",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
