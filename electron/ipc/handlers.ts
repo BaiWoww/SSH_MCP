@@ -1,49 +1,121 @@
-import { ipcMain } from 'electron'
+import { ipcMain, BrowserWindow } from 'electron'
+import { CredentialStore } from '../ssh/credential-store'
+import { ConnectionManager } from '../ssh/connection-manager'
+import { SftpOperations } from '../ssh/sftp-operations'
+import { McpServerController } from '../mcp/server'
+import * as crypto from 'crypto'
+import type { ConnectionConfig, McpActivityEntry } from '../types'
+
+const credentialStore = new CredentialStore()
+const connectionManager = new ConnectionManager()
+const mcpServer = new McpServerController(connectionManager)
+
+function sendToRenderer(channel: string, data: unknown): void {
+  const windows = BrowserWindow.getAllWindows()
+  for (const win of windows) {
+    win.webContents.send(channel, data)
+  }
+}
+
+connectionManager.on('statusChange', (status) => {
+  sendToRenderer('connection:statusChange', status)
+})
+
+mcpServer.on('activity', (entry: McpActivityEntry) => {
+  sendToRenderer('mcp:activity', entry)
+})
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('connection:list', async () => {
-    return []
+    return credentialStore.listConnections()
   })
-  ipcMain.handle('connection:save', async (_event, _conn) => {
-    throw new Error('connection:save not yet implemented')
+
+  ipcMain.handle('connection:save', async (_event, conn: ConnectionConfig) => {
+    const id = conn.id || crypto.randomUUID()
+    const toSave: ConnectionConfig = { ...conn, id }
+    await credentialStore.saveConnection(toSave)
+    return toSave
   })
-  ipcMain.handle('connection:delete', async (_event, _id) => {
-    throw new Error('connection:delete not yet implemented')
+
+  ipcMain.handle('connection:delete', async (_event, id: string) => {
+    if (connectionManager.isConnected(id)) {
+      await connectionManager.disconnect(id)
+    }
+    await credentialStore.deleteConnection(id)
   })
-  ipcMain.handle('connection:connect', async (_event, _id) => {
-    throw new Error('connection:connect not yet implemented')
+
+  ipcMain.handle('connection:connect', async (_event, id: string) => {
+    const config = await credentialStore.getConnection(id)
+    if (!config) throw new Error(`Connection ${id} not found`)
+    await connectionManager.connect(config)
   })
-  ipcMain.handle('connection:disconnect', async (_event, _id) => {
-    throw new Error('connection:disconnect not yet implemented')
+
+  ipcMain.handle('connection:disconnect', async (_event, id: string) => {
+    if (mcpServer.getActiveConnectionId() === id) {
+      mcpServer.setActiveConnection(null)
+    }
+    await connectionManager.disconnect(id)
   })
-  ipcMain.handle('connection:test', async (_event, _conn) => {
-    throw new Error('connection:test not yet implemented')
+
+  ipcMain.handle('connection:test', async (_event, conn: ConnectionConfig) => {
+    try {
+      await connectionManager.connect(conn)
+      await connectionManager.disconnect(conn.id)
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: (err as Error).message }
+    }
   })
-  ipcMain.handle('connection:status', async (_event, _id) => {
-    return { id: _id, connected: false }
+
+  ipcMain.handle('connection:status', async (_event, id: string) => {
+    return connectionManager.getStatus(id)
   })
-  ipcMain.handle('files:list', async (_e, _connId, _remotePath) => {
-    throw new Error('files:list not yet implemented')
+
+  ipcMain.handle('files:list', async (_e, connId: string, remotePath: string) => {
+    const ops = new SftpOperations(connectionManager, connId)
+    return ops.listDirectory(remotePath)
   })
-  ipcMain.handle('files:read', async (_e, _connId, _remotePath) => {
-    throw new Error('files:read not yet implemented')
+
+  ipcMain.handle('files:read', async (_e, connId: string, remotePath: string) => {
+    const ops = new SftpOperations(connectionManager, connId)
+    return ops.readFile(remotePath)
   })
-  ipcMain.handle('files:write', async (_e, _connId, _remotePath, _content) => {
-    throw new Error('files:write not yet implemented')
+
+  ipcMain.handle('files:write', async (_e, connId: string, remotePath: string, content: string) => {
+    const ops = new SftpOperations(connectionManager, connId)
+    await ops.writeFile(remotePath, content)
   })
-  ipcMain.handle('files:stat', async (_e, _connId, _remotePath) => {
-    throw new Error('files:stat not yet implemented')
+
+  ipcMain.handle('files:stat', async (_e, connId: string, remotePath: string) => {
+    const ops = new SftpOperations(connectionManager, connId)
+    return ops.stat(remotePath)
   })
-  ipcMain.handle('files:mkdir', async (_e, _connId, _remotePath) => {
-    throw new Error('files:mkdir not yet implemented')
+
+  ipcMain.handle('files:mkdir', async (_e, connId: string, remotePath: string) => {
+    const ops = new SftpOperations(connectionManager, connId)
+    await ops.mkdirp(remotePath)
   })
-  ipcMain.handle('files:remove', async (_e, _connId, _remotePath) => {
-    throw new Error('files:remove not yet implemented')
+
+  ipcMain.handle('files:remove', async (_e, connId: string, remotePath: string) => {
+    const ops = new SftpOperations(connectionManager, connId)
+    await ops.remove(remotePath)
   })
+
   ipcMain.handle('mcp:status', async () => {
-    return { running: false, activeConnectionId: null }
+    return {
+      running: mcpServer.isRunning(),
+      activeConnectionId: mcpServer.getActiveConnectionId(),
+      transport: 'stdio' as const,
+    }
   })
-  ipcMain.handle('mcp:setActiveConnection', async (_event, _connId) => {
-    throw new Error('mcp:setActiveConnection not yet implemented')
+
+  ipcMain.handle('mcp:setActiveConnection', async (_event, connId: string) => {
+    if (!connectionManager.isConnected(connId)) {
+      throw new Error(`Connection ${connId} is not active`)
+    }
+    mcpServer.setActiveConnection(connId)
+    if (!mcpServer.isRunning()) {
+      await mcpServer.start()
+    }
   })
 }

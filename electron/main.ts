@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import * as path from 'path'
 import { registerIpcHandlers } from './ipc/handlers'
+import { ConnectionManager } from './ssh/connection-manager'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -43,6 +44,11 @@ app.whenReady().then(() => {
       createWindow()
     }
   })
+})
+
+app.on('before-quit', async () => {
+  const mgr = new ConnectionManager()
+  await mgr.disconnectAll()
 })
 
 app.on('window-all-closed', () => {
