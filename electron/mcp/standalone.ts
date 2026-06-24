@@ -36,7 +36,7 @@ const TOOLS = [
   {
     name: 'write_file',
     description: 'Write text content to a remote file, overwriting existing content.',
-    inputSchema: { type: 'object', properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] },
+    inputSchema: { type: 'object', properties: { path: { type: 'string' }, content: { type: 'string' }, encoding: { type: 'string' } }, required: ['path', 'content'] },
   },
   {
     name: 'list_directory',

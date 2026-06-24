@@ -1,6 +1,7 @@
 import * as http from 'http'
 import type { ConnectionManager } from '../ssh/connection-manager'
 import { SftpOperations } from '../ssh/sftp-operations'
+import * as crypto from 'crypto'
 
 interface BridgeRequest {
   tool: string
@@ -38,9 +39,12 @@ export class McpHttpBridge {
                 )
                 break
               case 'write_file':
+                const content = request.args.encoding === 'base64'
+                  ? Buffer.from(request.args.content as string, 'base64')
+                  : request.args.content as string
                 await ops.writeFile(
                   request.args.path as string,
-                  request.args.content as string,
+                  content,
                 )
                 result = { success: true }
                 break
@@ -73,7 +77,8 @@ export class McpHttpBridge {
           }
         })
       })
-      this.server.listen(0, '127.0.0.1', () => {
+      const port = parseInt(process.env.AGENTSSH_BRIDGE_PORT ?? '0', 10) || 0
+    this.server.listen(port, '127.0.0.1', () => {
         const addr = this.server!.address()
         this.port = typeof addr === 'object' && addr ? addr.port : 0
         resolve(this.port)

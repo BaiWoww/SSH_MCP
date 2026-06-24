@@ -146,4 +146,27 @@ export function registerIpcHandlers(): void {
     }
     return mcpBridge.getPort()
   })
+
+  const bridgePort = process.env.AGENTSSH_BRIDGE_PORT
+  const connectionId = process.env.AGENTSSH_CONNECTION_ID
+  if (bridgePort && connectionId) {
+    setTimeout(async () => {
+      try {
+        const config = await credentialStore.getConnection(connectionId)
+        if (config && !connectionManager.isConnected(connectionId)) {
+          await connectionManager.connect(config)
+        }
+        if (connectionManager.isConnected(connectionId)) {
+          mcpServer.setActiveConnection(connectionId)
+          if (!mcpServer.isRunning()) {
+            await mcpServer.start()
+          }
+          await mcpBridge.start()
+          bridgeStarted = true
+        }
+      } catch (err) {
+        console.error('MCP auto-start failed:', err)
+      }
+    }, 1000)
+  }
 }

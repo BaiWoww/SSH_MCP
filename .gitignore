@@ -1,11 +1,35 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 dist-electron/
 release/
 release2/
 release3/
+
+# Electron cache
 .electron-cache/
 .electron-builder-cache/
 .node-gyp/
-*.log
+
+# Credential storage (never commit)
+.agentssh-data/
+agentssh-credentials*.json
+
+# Environment & secrets
 .env
+.env.*
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

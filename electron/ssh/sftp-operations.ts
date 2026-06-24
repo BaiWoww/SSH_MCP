@@ -23,7 +23,7 @@ export class SftpOperations {
     const sftp = await this.getSftp()
     return new Promise<string>((resolve, reject) => {
       const chunks: Buffer[] = []
-      const stream = sftp.createReadStream(remotePath, { encoding })
+      const stream = sftp.createReadStream(remotePath)
       stream.on('data', (chunk: Buffer) => chunks.push(chunk))
       stream.on('end', () => resolve(Buffer.concat(chunks).toString(encoding)))
       stream.on('error', reject)
