@@ -38,6 +38,7 @@ export const ipc = {
     getStatus: (): Promise<McpStatus> => window.api.mcp.getStatus(),
     setActiveConnection: (connId: string): Promise<void> =>
       window.api.mcp.setActiveConnection(connId),
+    getBridgePort: (): Promise<number> => window.api.mcp.getBridgePort(),
     onActivity: (cb: (entry: McpActivityEntry) => void): (() => void) =>
       window.api.mcp.onActivity(cb),
   },

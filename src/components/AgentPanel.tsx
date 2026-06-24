@@ -1,14 +1,17 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/app-store'
+import { ipc } from '../lib/ipc'
 
 export function AgentPanel() {
   const mcpStatus = useAppStore((s) => s.mcpStatus)
   const mcpActivity = useAppStore((s) => s.mcpActivity)
   const activeConnectionId = useAppStore((s) => s.activeConnectionId)
   const refreshMcpStatus = useAppStore((s) => s.refreshMcpStatus)
+  const [bridgePort, setBridgePort] = useState<number | null>(null)
 
   useEffect(() => {
     refreshMcpStatus()
+    ipc.mcp.getBridgePort().then(setBridgePort).catch(() => {})
     const interval = setInterval(refreshMcpStatus, 5000)
     return () => clearInterval(interval)
   }, [refreshMcpStatus])
@@ -46,8 +49,9 @@ export function AgentPanel() {
   "mcpServers": {
     "agentssh": {
       "command": "node",
-      "args": ["${'<安装路径>/dist-electron/mcp-standalone.js'}"],
+      "args": ["dist-electron/mcp/standalone.js"],
       "env": {
+        "AGENTSSH_BRIDGE_PORT": "${bridgePort ?? '<端口>'}",
         "AGENTSSH_CONNECTION_ID": "${activeConnectionId ?? '<连接ID>'}"
       }
     }

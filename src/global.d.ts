@@ -7,11 +7,6 @@ import type {
   McpStatus,
 } from '../electron/types'
 
-declare module 'keytar' {
-  export function getPasswordSync(service: string, account: string): string | null
-  export function setPasswordSync(service: string, account: string, password: string): void
-}
-
 declare global {
   interface Window {
     api: {
@@ -35,6 +30,7 @@ declare global {
       mcp: {
         getStatus: () => Promise<McpStatus>
         setActiveConnection: (connId: string) => Promise<void>
+        getBridgePort: () => Promise<number>
         onActivity: (callback: (entry: McpActivityEntry) => void) => () => void
       }
       connectionEvents: {

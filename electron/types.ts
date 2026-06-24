@@ -1,3 +1,8 @@
+declare module 'keytar' {
+  export function getPasswordSync(service: string, account: string): string | null
+  export function setPasswordSync(service: string, account: string, password: string): void
+}
+
 export type AuthMethod = 'password' | 'privateKey' | 'agent'
 
 export interface ConnectionConfig {

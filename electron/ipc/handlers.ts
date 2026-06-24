@@ -3,12 +3,15 @@ import { CredentialStore } from '../ssh/credential-store'
 import { ConnectionManager } from '../ssh/connection-manager'
 import { SftpOperations } from '../ssh/sftp-operations'
 import { McpServerController } from '../mcp/server'
+import { McpHttpBridge } from '../mcp/bridge'
 import * as crypto from 'crypto'
 import type { ConnectionConfig, McpActivityEntry } from '../types'
 
 const credentialStore = new CredentialStore()
 const connectionManager = new ConnectionManager()
 const mcpServer = new McpServerController(connectionManager)
+const mcpBridge = new McpHttpBridge(connectionManager)
+let bridgeStarted = false
 
 function sendToRenderer(channel: string, data: unknown): void {
   const windows = BrowserWindow.getAllWindows()
@@ -117,5 +120,17 @@ export function registerIpcHandlers(): void {
     if (!mcpServer.isRunning()) {
       await mcpServer.start()
     }
+    if (!bridgeStarted) {
+      await mcpBridge.start()
+      bridgeStarted = true
+    }
+  })
+
+  ipcMain.handle('mcp:bridgePort', async () => {
+    if (!bridgeStarted) {
+      await mcpBridge.start()
+      bridgeStarted = true
+    }
+    return mcpBridge.getPort()
   })
 }

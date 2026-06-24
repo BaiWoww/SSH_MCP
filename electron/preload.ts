@@ -28,6 +28,7 @@ const api = {
     getStatus: () => ipcRenderer.invoke('mcp:status'),
     setActiveConnection: (connId: string) =>
       ipcRenderer.invoke('mcp:setActiveConnection', connId),
+    getBridgePort: () => ipcRenderer.invoke('mcp:bridgePort'),
     onActivity: (callback: (entry: unknown) => void) => {
       const handler = (_e: unknown, entry: unknown) => callback(entry)
       ipcRenderer.on('mcp:activity', handler)
