@@ -70,6 +70,19 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle('connection:quickConnect', async (_event, conn: ConnectionConfig) => {
+    const existing = await credentialStore.listConnections()
+    const match = existing.find(
+      (c) => c.host === conn.host && c.port === conn.port && c.username === conn.username,
+    )
+    const id = match?.id ?? crypto.randomUUID()
+    const name = match?.name ?? `${conn.username}@${conn.host}:${conn.port}`
+    const toSave: ConnectionConfig = { ...conn, id, name }
+    await credentialStore.saveConnection(toSave)
+    await connectionManager.connect(toSave)
+    return toSave
+  })
+
   ipcMain.handle('connection:status', async (_event, id: string) => {
     return connectionManager.getStatus(id)
   })

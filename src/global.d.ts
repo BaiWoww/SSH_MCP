@@ -17,6 +17,7 @@ declare global {
         connect: (id: string) => Promise<void>
         disconnect: (id: string) => Promise<void>
         test: (conn: ConnectionConfig) => Promise<{ ok: boolean; error?: string }>
+        quickConnect: (conn: ConnectionConfig) => Promise<ConnectionConfig>
         status: (id: string) => Promise<ConnectionStatus>
       }
       files: {

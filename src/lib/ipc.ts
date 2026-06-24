@@ -17,6 +17,8 @@ export const ipc = {
     disconnect: (id: string): Promise<void> => window.api.connection.disconnect(id),
     test: (conn: ConnectionConfig): Promise<{ ok: boolean; error?: string }> =>
       window.api.connection.test(conn),
+    quickConnect: (conn: ConnectionConfig): Promise<ConnectionConfig> =>
+      window.api.connection.quickConnect(conn),
     status: (id: string): Promise<ConnectionStatus> =>
       window.api.connection.status(id),
   },

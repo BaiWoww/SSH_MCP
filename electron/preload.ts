@@ -8,6 +8,7 @@ const api = {
     connect: (id: string) => ipcRenderer.invoke('connection:connect', id),
     disconnect: (id: string) => ipcRenderer.invoke('connection:disconnect', id),
     test: (conn: unknown) => ipcRenderer.invoke('connection:test', conn),
+    quickConnect: (conn: unknown) => ipcRenderer.invoke('connection:quickConnect', conn),
     status: (id: string) => ipcRenderer.invoke('connection:status', id),
   },
   files: {

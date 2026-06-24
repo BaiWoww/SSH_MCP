@@ -13,6 +13,7 @@ export function ConnectionList() {
   const setActiveConnection = useAppStore((s) => s.setActiveConnection)
   const onEdit = useAppStore((s) => s.onEditConnection)
   const onAdd = useAppStore((s) => s.onAddConnection)
+  const onQuickConnect = useAppStore((s) => s.onQuickConnect)
   const loading = useAppStore((s) => s.loading)
 
   useEffect(() => {
@@ -23,12 +24,20 @@ export function ConnectionList() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-3 border-b border-agent-border">
         <h2 className="text-lg font-semibold text-gray-200">SSH 连接</h2>
-        <button
-          onClick={onAdd}
-          className="px-3 py-1.5 bg-agent-primary hover:bg-indigo-600 rounded text-white text-sm transition-colors"
-        >
-          + 新建连接
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onQuickConnect}
+            className="px-3 py-1.5 bg-agent-surface hover:bg-agent-border rounded text-gray-200 text-sm transition-colors"
+          >
+            快速连接
+          </button>
+          <button
+            onClick={onAdd}
+            className="px-3 py-1.5 bg-agent-primary hover:bg-indigo-600 rounded text-white text-sm transition-colors"
+          >
+            + 新建连接
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

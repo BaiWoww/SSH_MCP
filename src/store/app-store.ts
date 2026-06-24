@@ -22,6 +22,9 @@ interface AppState {
   onAddConnection: () => void
   onEditConnection: (conn: ConnectionConfig) => void
   closeFormModal: () => void
+  quickConnectModal: { open: boolean }
+  onQuickConnect: () => void
+  closeQuickConnectModal: () => void
   openFilePath: string | null
   openFile: (path: string) => void
   clearOpenFile: () => void
@@ -32,6 +35,7 @@ interface AppState {
   connect: (id: string) => Promise<void>
   disconnect: (id: string) => Promise<void>
   testConnection: (conn: ConnectionConfig) => Promise<{ ok: boolean; error?: string }>
+  quickConnect: (conn: ConnectionConfig) => Promise<ConnectionConfig | null>
   setActiveConnection: (id: string | null) => void
   setActiveTab: (tab: TabId) => void
   refreshMcpStatus: () => Promise<void>
@@ -53,6 +57,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   onAddConnection: () => set({ formModal: { open: true, editing: null } }),
   onEditConnection: (conn) => set({ formModal: { open: true, editing: conn } }),
   closeFormModal: () => set({ formModal: { open: false, editing: null } }),
+  quickConnectModal: { open: false },
+  onQuickConnect: () => set({ quickConnectModal: { open: true } }),
+  closeQuickConnectModal: () => set({ quickConnectModal: { open: false } }),
   openFilePath: null,
 
   openFile: (path) => set({ openFilePath: path, activeTab: 'files' }),
@@ -121,6 +128,23 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   testConnection: async (conn) => {
     return ipc.connection.test(conn)
+  },
+
+  quickConnect: async (conn) => {
+    set({ loading: true, error: null })
+    try {
+      const saved = await ipc.connection.quickConnect(conn)
+      await get().loadConnections()
+      const status = await ipc.connection.status(saved.id)
+      set((state) => ({
+        loading: false,
+        statuses: { ...state.statuses, [saved.id]: status },
+      }))
+      return saved
+    } catch (err) {
+      set({ loading: false, error: (err as Error).message })
+      return null
+    }
   },
 
   setActiveConnection: (id) => {

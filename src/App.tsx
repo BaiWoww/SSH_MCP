@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAppStore } from './store/app-store'
 import { ConnectionList } from './components/ConnectionList'
 import { ConnectionForm } from './components/ConnectionForm'
+import { QuickConnectForm } from './components/QuickConnectForm'
 import { FileExplorer } from './components/FileExplorer'
 import { FileEditor } from './components/FileEditor'
 import { AgentPanel } from './components/AgentPanel'
@@ -11,6 +12,8 @@ export default function App() {
   const setActiveTab = useAppStore((s) => s.setActiveTab)
   const formModal = useAppStore((s) => s.formModal)
   const closeFormModal = useAppStore((s) => s.closeFormModal)
+  const quickConnectModal = useAppStore((s) => s.quickConnectModal)
+  const closeQuickConnectModal = useAppStore((s) => s.closeQuickConnectModal)
   const initEventListeners = useAppStore((s) => s.initEventListeners)
   const loadConnections = useAppStore((s) => s.loadConnections)
   const error = useAppStore((s) => s.error)
@@ -84,6 +87,10 @@ export default function App() {
 
       {formModal.open && (
         <ConnectionForm editing={formModal.editing} onClose={closeFormModal} />
+      )}
+
+      {quickConnectModal.open && (
+        <QuickConnectForm onClose={closeQuickConnectModal} />
       )}
     </div>
   )
