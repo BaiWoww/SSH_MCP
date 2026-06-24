@@ -59,6 +59,10 @@
       "dist-electron/**/*",
       "package.json"
     ],
+    "asarUnpack": [
+      "**/*.node",
+      "node_modules/keytar/**/*"
+    ],
     "win": {
       "target": "nsis",
       "signAndEditExecutable": false
