@@ -30,7 +30,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "build:standalone": "tsc -p tsconfig.node.json"
+    "build:standalone": "tsc -p tsconfig.node.json",
+    "start:mcp": "node dist-electron/headless.js"
   },
   "dependencies": {
     "ssh2": "^1.15.0",

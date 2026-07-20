@@ -63,7 +63,61 @@ npm run build:electron   # 打包可执行文件（输出到 release/）
 npm test          # vitest（22 个测试）
 ```
 
-## Claude Desktop 接入
+## Headless MCP 接入（推荐，无需 GUI）
+
+智能体宿主（WorkBuddy / Claude Desktop 等）可直接启动 headless 入口，读配置文件或环境变量连 SSH，**不依赖 GUI**：
+
+1. 准备配置文件 `~/.ssh-mcp/config.json`（参考 `config.example.json`），或用 `SSH_*` 环境变量
+2. 编译：`npm run build:standalone`（生成 `dist-electron/headless.js`），或 `npm run start:mcp` 直接启动
+3. 在宿主 MCP 配置里声明：
+
+```json
+{
+  "mcpServers": {
+    "ssh": {
+      "command": "node",
+      "args": ["D:/baiwoo/ai-ssh/dist-electron/headless.js"],
+      "env": {
+        "SSH_MCP_CONFIG": "C:/Users/you/.ssh-mcp/config.json"
+      }
+    }
+  }
+}
+```
+
+或用环境变量单连接（无需配置文件）：
+
+```json
+{
+  "mcpServers": {
+    "ssh": {
+      "command": "node",
+      "args": ["D:/baiwoo/ai-ssh/dist-electron/headless.js"],
+      "env": {
+        "SSH_HOST": "10.0.0.10",
+        "SSH_USER": "deploy",
+        "SSH_AUTH_METHOD": "privateKey",
+        "SSH_PRIVATE_KEY_PATH": "C:/Users/you/.ssh/id_ed25519"
+      }
+    }
+  }
+}
+```
+
+启动后默认连接自动建立，12 个工具立即可用。环境变量（优先级高于配置文件同名条目）：
+
+| 变量 | 含义 |
+|------|------|
+| `SSH_MCP_CONFIG` | 配置文件路径（默认 `~/.ssh-mcp/config.json`） |
+| `SSH_HOST` / `SSH_PORT` / `SSH_USER` | 单连接主机/端口/用户 |
+| `SSH_AUTH_METHOD` | `password` \| `privateKey` \| `agent` |
+| `SSH_PASSWORD` / `SSH_PRIVATE_KEY` / `SSH_PRIVATE_KEY_PATH` / `SSH_PASSPHRASE` | 认证凭证 |
+| `SSH_CONNECTION_NAME` | 连接名（默认 `default`） |
+| `SSH_DEFAULT` | `false` 则不自动激活 env 连接 |
+
+> 配置文件可能含凭证，请用文件权限/密钥管理保护，且**不要提交到 git**（`.gitignore` 已排除 `ssh-mcp-config*.json`）。
+
+## Claude Desktop 接入（GUI + standalone 模式）
 
 1. 启动 AgentSSH，添加并连接一台服务器，点击「设为活动」
 2. 在「智能体」信息里拿到 bridge 端口与连接 id（或从 GUI 状态查看）
