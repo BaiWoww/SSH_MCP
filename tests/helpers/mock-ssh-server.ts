@@ -1,4 +1,4 @@
-import * as ssh2 from 'ssh2'
+import ssh2 from 'ssh2'
 import { generateKeyPairSync } from 'crypto'
 
 export interface MockSshServerOptions {

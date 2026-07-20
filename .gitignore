@@ -3,19 +3,10 @@ node_modules/
 
 # Build output
 dist/
-dist-electron/
-release/
-release2/
-release3/
 
-# Electron cache
-.electron-cache/
-.electron-builder-cache/
-.node-gyp/
-
-# Credential storage (never commit)
-.agentssh-data/
-agentssh-credentials*.json
+# Local SSH MCP config (may contain secrets — never commit)
+.ssh-mcp/
+ssh-mcp-config*.json
 
 # Environment & secrets
 .env
@@ -33,3 +24,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# WorkBuddy workspace data (local only, never commit)
+.workbuddy/

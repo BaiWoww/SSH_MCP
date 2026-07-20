@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { ConnectionManager } from '../../electron/ssh/connection-manager'
+import { ConnectionManager } from '../../src/ssh/connection-manager'
 import { startMockSshServer } from '../helpers/mock-ssh-server'
-import type { ConnectionConfig } from '../../electron/types'
+import type { SshConnectionConfig } from '../../src/types'
 
 const TEST_PORT = 2222
 let serverHandle: { close: () => Promise<void> } | null = null
@@ -24,10 +24,9 @@ afterEach(async () => {
   }
 })
 
-function makeConn(): ConnectionConfig {
+function makeConn(): SshConnectionConfig {
   return {
-    id: 'test-conn',
-    name: 'Test',
+    name: 'test-conn',
     host: '127.0.0.1',
     port: TEST_PORT,
     username: 'testuser',
@@ -71,8 +70,13 @@ describe('ConnectionManager', () => {
     await mgr.disconnect('test-conn')
   })
 
-  it('throws when getSftp called on disconnected connection', async () => {
+  it('throws when getSftp called on a disconnected connection', async () => {
     const mgr = new ConnectionManager()
     await expect(mgr.getSftp('nonexistent')).rejects.toThrow()
+  })
+
+  it('exec rejects when the connection is not active', async () => {
+    const mgr = new ConnectionManager()
+    await expect(mgr.exec('nonexistent', 'echo hi')).rejects.toThrow()
   })
 })

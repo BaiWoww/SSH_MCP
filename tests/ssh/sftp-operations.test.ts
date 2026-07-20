@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { Readable, Writable } from 'stream'
-import { SftpOperations } from '../../electron/ssh/sftp-operations'
-import type { ConnectionManager } from '../../electron/ssh/connection-manager'
+import { SftpOperations } from '../../src/ssh/sftp-operations'
+import type { ConnectionManager } from '../../src/ssh/connection-manager'
+import type { ExecResult } from '../../src/types'
 
 interface MockFile {
   content: Buffer
@@ -133,11 +134,18 @@ class FakeSftpWrapper {
   }
 }
 
+function fakeExecResult(command: string): ExecResult {
+  return { command, stdout: '', stderr: '', code: 0, timedOut: false }
+}
+
 function createFakeManager(files?: Record<string, string>): ConnectionManager {
   const sftp = new FakeSftpWrapper(files)
   return {
     getSftp: vi.fn().mockResolvedValue(sftp),
     isConnected: vi.fn().mockReturnValue(true),
+    exec: vi.fn().mockImplementation((_name: string, command: string) =>
+      Promise.resolve(fakeExecResult(command)),
+    ),
   } as unknown as ConnectionManager
 }
 
@@ -146,6 +154,12 @@ describe('SftpOperations', () => {
     const ops = new SftpOperations(createFakeManager({ '/test.txt': 'hello world' }), 'conn-1')
     const content = await ops.readFile('/test.txt')
     expect(content).toBe('hello world')
+  })
+
+  it('reads a file as base64', async () => {
+    const ops = new SftpOperations(createFakeManager({ '/test.txt': 'hi' }), 'conn-1')
+    const content = await ops.readFile('/test.txt', 'base64')
+    expect(content).toBe(Buffer.from('hi').toString('base64'))
   })
 
   it('writes a file', async () => {
@@ -181,5 +195,33 @@ describe('SftpOperations', () => {
     expect(Array.isArray(entries)).toBe(true)
     expect(entries.length).toBe(2)
     expect(entries.map((e) => e.name).sort()).toEqual(['a.txt', 'b.txt'])
+  })
+
+  it('copy delegates to exec with cp', async () => {
+    const mgr = createFakeManager()
+    const ops = new SftpOperations(mgr, 'conn-1')
+    await ops.copy('/a', '/b', true)
+    expect(mgr.exec).toHaveBeenCalledWith('conn-1', expect.stringContaining('cp -r'), undefined)
+  })
+
+  it('chmod delegates to exec with chmod -R when recursive', async () => {
+    const mgr = createFakeManager()
+    const ops = new SftpOperations(mgr, 'conn-1')
+    await ops.chmod('/dir', '755', true)
+    expect(mgr.exec).toHaveBeenCalledWith('conn-1', expect.stringContaining('chmod -R 755'), undefined)
+  })
+
+  it('removeDirectoryRecursive delegates to exec with rm -rf', async () => {
+    const mgr = createFakeManager()
+    const ops = new SftpOperations(mgr, 'conn-1')
+    await ops.removeDirectoryRecursive('/dir')
+    expect(mgr.exec).toHaveBeenCalledWith('conn-1', expect.stringContaining('rm -rf'), undefined)
+  })
+
+  it('execute wraps cwd via cd && command', async () => {
+    const mgr = createFakeManager()
+    const ops = new SftpOperations(mgr, 'conn-1')
+    await ops.execute('ls', { cwd: '/var', timeoutMs: 5000 })
+    expect(mgr.exec).toHaveBeenCalledWith('conn-1', expect.stringContaining('cd'), 5000)
   })
 })
