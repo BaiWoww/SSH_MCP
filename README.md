@@ -1,207 +1,103 @@
-# SSH MCP
+# AgentSSH
 
-**A local MCP server that exposes cloud servers to AI agents over SSH.**
+**SSH 连接管理 GUI + MCP 工具** —— 在桌面界面里安全管理 SSH 连接，并通过 MCP 把这些连接暴露给 AI 智能体，让智能体能像操作本地一样操作远程服务器（文件操作 + 命令执行）。
 
-SSH MCP lets an AI agent (Claude Desktop, WorkBuddy, Cursor, or any MCP-capable host)
-operate a remote server almost like a local machine — browse and edit files via SFTP,
-run shell commands, manage multiple connections — all through the standard
-[Model Context Protocol](https://modelcontextprotocol.io).
+AgentSSH 是一个 Electron 应用：GUI 只负责**添加/编辑/连接 SSH 服务器**（凭证经 OS keychain 加密存储，避免写进配置文件或直接发给智能体）；实际的文件与命令操作通过 **MCP 工具**交给智能体执行。
 
-This is the refactored, headless successor to the original AgentSSH Electron app.
-The Electron GUI and the encrypted keychain credential store have been removed; the
-SSH/SFTP engine is preserved and exposed directly as a stdio MCP server.
+## 特性
 
-## Features
+- **GUI 连接管理** — 添加/编辑/删除连接，密码/私钥/SSH agent 认证，凭证 AES-256-GCM 加密 + OS keychain（keytar）
+- **一键激活** — 在连接列表把某个连接设为 MCP 活动连接，智能体即通过它操作
+- **MCP 工具集（12 个）** — 文件读写/列举/复制/移动/删除/chmod + 远程命令执行
+- **双 MCP 模式** — 内嵌 stdio MCP；或 standalone 进程（Claude Desktop 启动，经 HTTP 桥接回 GUI 管理的连接）
+- **命令执行** — `execute_command` 支持 cwd、超时，返回 stdout/stderr/exit code
 
-- **Pure local MCP server** — no GUI, no Electron. Launched by your AI host over stdio.
-- **Multiple SSH connections** — password, private key (file or inline), or SSH agent auth.
-- **Local-like file operations** — read/write (text & base64 binary), list, stat,
-  mkdir -p, delete, rename/move, copy (recursive), chmod, exists.
-- **Remote command execution** — run shell commands with cwd and timeout, get
-  stdout/stderr/exit code back.
-- **Connection management tools** — list, connect, disconnect, status, switch.
-- **Flexible config** — JSON config file (`~/.ssh-mcp/config.json` or `$SSH_MCP_CONFIG`)
-  and/or `SSH_*` environment variables for a quick single-server setup.
+## MCP 工具
 
-## MCP Tools
-
-### Connection management
-| Tool | Description |
-|------|-------------|
-| `list_connections` | List configured connections and their connected status |
-| `connect` | Connect to a named (or default) connection and activate it |
-| `disconnect` | Disconnect a connection (active by default) |
-| `connection_status` | Report the active connection and all statuses |
-
-### File operations (on the active connection)
-| Tool | Description |
-|------|-------------|
-| `read_file` | Read a remote file (utf8 or base64) |
-| `write_file` | Write a remote file (creates parent dirs; supports base64) |
-| `list_directory` | List directory entries with type/size/mtime |
-| `get_file_info` | Stat a file or directory |
+| 工具 | 说明 |
+|------|------|
+| `read_file` | 读取远程文件（utf8 或 base64） |
+| `write_file` | 写远程文件（建父目录，支持 base64） |
+| `list_directory` | 列目录 |
+| `get_file_info` | 文件/目录元信息 |
 | `create_directory` | mkdir -p |
-| `delete_file` | Delete a file |
-| `delete_directory` | Delete a directory (recursive option = `rm -rf`) |
-| `rename_or_move` | Rename or move a path |
-| `copy_file` | Copy a file or directory (recursive option) |
-| `file_exists` | Check existence |
-| `chmod` | Change permissions (`-R` optional) |
+| `delete_file` | 删除文件 |
+| `delete_directory` | 删除目录（recursive=true 即 rm -rf） |
+| `rename_or_move` | 重命名/移动 |
+| `copy_file` | 复制（recursive=true 即 cp -r） |
+| `file_exists` | 检查是否存在 |
+| `chmod` | 改权限（-R 可选） |
+| `execute_command` | 执行 shell 命令（cwd、超时可选） |
 
-### Command execution
-| Tool | Description |
-|------|-------------|
-| `execute_command` | Run a shell command (cwd & timeout optional), return stdout/stderr/code |
-
-## Getting Started
-
-### Prerequisites
-- Node.js >= 18
-
-### Install
-```bash
-git clone https://github.com/BaiWoww/SSH_MCP.git
-cd SSH_MCP
-npm install
-npm run build
-```
-
-### Configure
-
-Pick one of two ways (they compose — env vars define/override a connection named `default`).
-
-**Option A — config file** (recommended for multiple servers):
-
-```bash
-mkdir -p ~/.ssh-mcp
-cp config.example.json ~/.ssh-mcp/config.json
-# edit ~/.ssh-mcp/config.json with your hosts
-```
-
-```json
-{
-  "defaultConnection": "prod",
-  "connections": [
-    {
-      "name": "prod",
-      "host": "10.0.0.10",
-      "port": 22,
-      "username": "deploy",
-      "authMethod": "privateKey",
-      "privateKeyPath": "~/.ssh/id_ed25519",
-      "default": true
-    },
-    {
-      "name": "staging",
-      "host": "10.0.0.11",
-      "port": 22,
-      "username": "ubuntu",
-      "authMethod": "password",
-      "password": "your-password"
-    }
-  ]
-}
-```
-
-> `privateKeyPath` is read at startup; inline `privateKey` is also supported.
-> Restrict the file permissions of `config.json` since it may contain secrets.
-
-**Option B — environment variables** (single server):
-
-| Variable | Meaning |
-|----------|---------|
-| `SSH_HOST` | Server host (required to enable env-mode) |
-| `SSH_PORT` | Port (default 22) |
-| `SSH_USER` / `SSH_USERNAME` | Login user (default root) |
-| `SSH_AUTH_METHOD` | `password` \| `privateKey` \| `agent` (default password) |
-| `SSH_PASSWORD` | Password (password auth) |
-| `SSH_PRIVATE_KEY` | Inline PEM key (privateKey auth) |
-| `SSH_PRIVATE_KEY_PATH` | Path to a key file (privateKey auth) |
-| `SSH_PASSPHRASE` | Key passphrase (privateKey auth) |
-| `SSH_CONNECTION_NAME` | Name for the env connection (default `default`) |
-| `SSH_DEFAULT` | `false` to not auto-activate the env connection |
-| `SSH_MCP_CONFIG` | Path to a config file (overrides the default `~/.ssh-mcp/config.json`) |
-
-### Run standalone
-```bash
-npm start
-# or: node dist/index.js
-```
-
-## Connecting an AI host
-
-### Claude Desktop
-Add to `claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "ssh": {
-      "command": "node",
-      "args": ["/absolute/path/to/SSH_MCP/dist/index.js"],
-      "env": {
-        "SSH_MCP_CONFIG": "/Users/you/.ssh-mcp/config.json"
-      }
-    }
-  }
-}
-```
-
-Or with environment-only single server:
-```json
-{
-  "mcpServers": {
-    "ssh": {
-      "command": "node",
-      "args": ["/absolute/path/to/SSH_MCP/dist/index.js"],
-      "env": {
-        "SSH_HOST": "10.0.0.10",
-        "SSH_USER": "deploy",
-        "SSH_AUTH_METHOD": "privateKey",
-        "SSH_PRIVATE_KEY_PATH": "/Users/you/.ssh/id_ed25519"
-      }
-    }
-  }
-}
-```
-
-### WorkBuddy / other MCP hosts
-Point the host's MCP config at `node /path/to/dist/index.js` with the appropriate
-environment variables. Restart the host after saving.
-
-On startup the default connection is auto-connected (failures are logged to stderr
-and surfaced to the agent when it calls a tool). The agent can then call
-`list_connections`, `connect`, etc. to switch servers.
-
-## Architecture
+## 架构
 
 ```
-AI host (Claude Desktop / WorkBuddy / ...)
-    │  stdio (MCP protocol)
+Renderer (React + Vite + Tailwind + Zustand)
+    │  window.api (contextBridge IPC)
     ▼
-src/index.ts                 entry: load config, start server, graceful shutdown
-├── config.ts                config file + env var loading & validation
-├── ssh/
-│   ├── connection-manager.ts  ssh2 Client lifecycle + exec (timeout-aware)
-│   └── sftp-operations.ts     SFTP file ops + shell-based copy/chmod/rm -rf
-└── mcp/
-    ├── tools.ts             17 MCP tools (zod schemas → JSON Schema)
-    └── server.ts            stdio MCP server wiring
+Main Process (Electron)
+    ├── CredentialStore (keytar + AES-256-GCM)
+    ├── ConnectionManager (ssh2)  ── SFTP + exec(超时)
+    ├── McpServer (内嵌 stdio)
+    ├── McpHttpBridge (127.0.0.1，供 standalone 调用)
+    └── McpStandalone (Claude Desktop 启动)
 ```
 
-All diagnostics go to **stderr**; stdout is reserved exclusively for the MCP protocol.
+## 开发
 
-## Development
 ```bash
-npm run dev       # watch compile
-npm test          # run vitest
-npm run typecheck # tsc --noEmit
+npm install
+npm run dev      # Vite + Electron 并行启动
 ```
 
-## Security notes
-- Secrets live in your config file or environment — protect them (file perms, secret manager).
-- `execute_command` and `delete_directory` (recursive) are powerful and irreversible; agents
-  should confirm destructive actions with you.
-- Connections target the hosts you configure; no inbound ports are opened by this server.
+## 构建
+
+```bash
+npm run build            # tsc(后端) + vite build(前端)
+npm run build:electron   # 打包可执行文件（输出到 release/）
+```
+
+## 测试
+
+```bash
+npm test          # vitest（22 个测试）
+```
+
+## Claude Desktop 接入
+
+1. 启动 AgentSSH，添加并连接一台服务器，点击「设为活动」
+2. 在「智能体」信息里拿到 bridge 端口与连接 id（或从 GUI 状态查看）
+3. 写入 `claude_desktop_config.json`：
+
+```json
+{
+  "mcpServers": {
+    "agentssh": {
+      "command": "node",
+      "args": ["path/to/dist-electron/mcp/standalone.js"],
+      "env": {
+        "AGENTSSH_BRIDGE_PORT": "<port>",
+        "AGENTSSH_CONNECTION_ID": "<connection-id>"
+      }
+    }
+  }
+}
+```
+
+4. 重启 Claude Desktop —— 智能体即可使用 AgentSSH 的 12 个工具操作该连接
+
+## 技术栈
+
+- **前端**：React 18、TypeScript、Tailwind CSS、Zustand
+- **后端**：Electron 30、ssh2、electron-store、keytar
+- **MCP**：@modelcontextprotocol/sdk、Zod
+- **构建**：Vite、electron-builder、vitest 3
+
+## 安全
+
+- SSH 凭证经 AES-256-GCM 加密后存入 OS keychain，不落明文
+- 智能体只拿到工具接口，不接触原始凭证
+- `delete_directory`(recursive) 与 `execute_command` 为高危操作，智能体应在执行前与你确认
 
 ## License
-MIT — see [LICENSE](LICENSE).
+MIT — 见 [LICENSE](LICENSE)

@@ -3,10 +3,19 @@ node_modules/
 
 # Build output
 dist/
+dist-electron/
+release/
+release2/
+release3/
 
-# Local SSH MCP config (may contain secrets — never commit)
-.ssh-mcp/
-ssh-mcp-config*.json
+# Electron cache
+.electron-cache/
+.electron-builder-cache/
+.node-gyp/
+
+# Credential storage (never commit)
+.agentssh-data/
+agentssh-credentials*.json
 
 # Environment & secrets
 .env
