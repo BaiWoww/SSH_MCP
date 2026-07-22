@@ -2,6 +2,8 @@ import * as http from 'http'
 import type { ConnectionManager } from '../ssh/connection-manager'
 import { SftpOperations } from '../ssh/sftp-operations'
 
+export const DEFAULT_BRIDGE_PORT = 17539
+
 interface BridgeRequest {
   tool: string
   connectionId: string
@@ -15,7 +17,7 @@ export class McpHttpBridge {
   constructor(private manager: ConnectionManager) {}
 
   start(): Promise<number> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.server = http.createServer(async (req, res) => {
         res.setHeader('Content-Type', 'application/json')
         if (req.method !== 'POST') {
@@ -101,10 +103,25 @@ export class McpHttpBridge {
           }
         })
       })
-      const port = parseInt(process.env.AGENTSSH_BRIDGE_PORT ?? '0', 10) || 0
+      const port =
+        parseInt(process.env.AGENTSSH_BRIDGE_PORT ?? String(DEFAULT_BRIDGE_PORT), 10) ||
+        DEFAULT_BRIDGE_PORT
+      this.server.on('error', (err: NodeJS.ErrnoException) => {
+        this.server = null
+        if (err.code === 'EADDRINUSE') {
+          reject(
+            new Error(
+              `Bridge port ${port} is already in use. Another AgentSSH instance may be running, ` +
+                `or set AGENTSSH_BRIDGE_PORT to override.`,
+            ),
+          )
+        } else {
+          reject(err)
+        }
+      })
       this.server.listen(port, '127.0.0.1', () => {
         const addr = this.server!.address()
-        this.port = typeof addr === 'object' && addr ? addr.port : 0
+        this.port = typeof addr === 'object' && addr ? addr.port : port
         resolve(this.port)
       })
     })
